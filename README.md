@@ -135,12 +135,14 @@ npm run preview    # 预览生产构建
 
 「口播转文字」与平台发布文案、原生字幕是**三种不同来源**，前端分别展示与导出，绝不混用。
 
-配置（「设置 → 语音识别服务」）：
-- API Base URL：如 `https://api.openai.com/v1`；
-- 转录接口路径：默认 `/audio/transcriptions`（OpenAI 风格 multipart 上传）；
-- API Key：自填；模型名称：如 `whisper-1`；语言：默认中文 `zh`。
+**两种使用方式**：
+1. **本机零成本方案（已实测可用）**：后端 fork（SolYoung-Ai/media-parser）内置了 faster-whisper 本地推理，**无需任何外部 API Key、零费用**。启动后端时设置 `ASR_MODEL=base`（首次自动下载 ~145MB 模型），前端 ASR Base URL 填后端地址（如 `http://localhost:8051`），Key 留空，模型填 `base`。主页会出现「⚡ 直接转写当前视频口播（免上传）」按钮——点击即由后端下载视频并本地转写，约 3~10 秒出结果。
+2. **外部 OpenAI 兼容服务**：如果你想用云端 ASR（OpenAI whisper-1 / Groq / SiliconFlow 等），在「设置 → 语音识别服务」填写：
+   - API Base URL：如 `https://api.openai.com/v1`；
+   - 转录接口路径：默认 `/v1/audio/transcriptions`（OpenAI 风格 multipart 上传）；
+   - API Key：自填；模型名称：如 `whisper-1`；语言：默认中文 `zh`。
 
-使用：主页「口播转写」面板上传你有权处理的音视频文件（建议 ≤25MB），转写结果填入「口播转写」标签页，支持复制与导出 TXT/JSON。语音识别服务不支持「配置空测」，需上传真实文件验证。
+使用：主页「口播转写」面板上传你有权处理的音视频文件（建议 ≤25MB），或直接点「直接转写当前视频口播」，转写结果填入「口播转写」标签页，支持复制与导出 TXT/SRT/JSON。转写结果单独标注为 AI 识别，与平台原生字幕区分。
 
 ## 七、三个平台目前支持什么（诚实声明）
 
