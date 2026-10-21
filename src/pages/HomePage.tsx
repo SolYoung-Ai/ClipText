@@ -119,6 +119,7 @@ export function HomePage({ initialLink = '' }: { initialLink?: string }) {
               settings={loadAsrSettings()}
               onTranscribed={setAsrText}
               hasSubtitle={result.subtitles.length > 0}
+              mediaUrl={result.videoUrl || result.audioUrl || ''}
             />
           </>
         )}
