@@ -63,21 +63,21 @@ export const PLATFORM_MAP: Record<string, PlatformId> = Object.fromEntries(
   PLATFORMS.map((p) => [p.id, p.id]),
 );
 
-/** 默认解析设置 */
+/** 默认解析设置（指向公网 Render 部署的 media-parser） */
 export const DEFAULT_PARSER_SETTINGS = {
-  baseUrl: '',
+  baseUrl: 'https://media-parser-unje.onrender.com',
   apiPath: '/api/v1/parse',
   authMode: 'none' as const,
   apiKey: '',
   timeoutMs: 20000,
 };
 
-/** 默认语音识别设置 */
+/** 默认语音识别设置（同公网后端；免费层若 OOM 会在前端提示） */
 export const DEFAULT_ASR_SETTINGS = {
-  baseUrl: '',
+  baseUrl: 'https://media-parser-unje.onrender.com',
   apiPath: '/v1/audio/transcriptions',
   apiKey: '',
-  model: 'whisper-1',
+  model: 'base',
   language: 'zh',
   persistKey: false,
 };
