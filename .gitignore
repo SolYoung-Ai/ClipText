@@ -1,0 +1,19 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# 日志
+*.log
+npm-debug.log*
+
+# 系统文件
+.DS_Store
+
+# 环境变量（本项目不使用 .env；密钥由用户在设置页自填，禁止写入仓库）
+.env
+.env.*
+!.env.example
