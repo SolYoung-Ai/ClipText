@@ -63,12 +63,14 @@ cliptext/
 ```bash
 npm install
 npm run dev        # 开发服务器，默认 http://localhost:5173
-npm test           # 运行全部单元/组件/接口 Mock 测试（88 个用例）
+npm test           # 运行全部单元/组件/接口 Mock 测试（90 个用例）
 npm run build      # 类型检查 + 生产构建 → dist/
 npm run preview    # 预览生产构建
 ```
 
 ## 四、部署到 GitHub Pages
+
+**本仓库已实际部署上线**：仓库 [SolYoung-Ai/ClipText](https://github.com/SolYoung-Ai/ClipText)，线上地址 **https://clip.solyoung.top**（备用 https://solyoung-ai.github.io/ClipText/）。
 
 ### 4.1 一键部署（推荐）
 
@@ -87,7 +89,7 @@ npm run preview    # 预览生产构建
 
 ### 4.3 自定义域名
 
-若使用自定义域名（如 `cliptext.solyoung.top`），在 Pages 设置中绑定即可；`base: './'` 不会破坏已有域名配置。
+线上已绑定 **clip.solyoung.top**：仓库根 `public/CNAME` 含该域名（构建时自动带入 dist），DNS 需要一条 CNAME 记录 `clip → solyoung-ai.github.io`。`base: './'` 不会破坏已有域名配置。
 
 ## 五、解析服务配置（必读）
 
@@ -102,16 +104,19 @@ npm run preview    # 预览生产构建
 
 保存后点击「测试连接」会发起**真实请求**验证，不会仅凭输入非空就显示成功。
 
-### 5.1 推荐后端：media-parser（MIT）
+### 5.1 推荐后端：media-parser（ClipText 补丁版）
 
-- 仓库：<https://github.com/ucmao/media-parser>
+- 上游仓库：<https://github.com/ucmao/media-parser>（MIT）；**已 fork 并打补丁**：[SolYoung-Ai/media-parser](https://github.com/SolYoung-Ai/media-parser)
 - 平台覆盖：抖音（含字幕）、小红书、视频号等 50+；响应协议即本前端适配的协议。
-- 部署方式（二选一）：
-  - **Docker Compose**（推荐）：`git clone` → `docker compose up -d --build` → 访问 `http://localhost:8051`；
-  - **Python 本地**：`pip install -r requirements.txt && python app.py`（Python 3.10+）。
-- 纯微服务模式：`.env` 中设置 `API_ONLY=true`，接口免鉴权，无需注册。
-- 小红书/视频号等平台如需稳定解析，可能需在服务端配置 Cookie 凭证或动态代理，详见其 README。
-- 免费托管评估：media-parser 是常驻服务，**免费层可运行但有限制**——例如 Render/Railway/Zeabur 免费实例会休眠（冷启动慢）、CPU/内存配额有限、每月免费时长有限；云函数类平台需自备可常驻运行环境。免费方案会失效的典型条件：实例休眠、流量/时长超限、平台风控。**请勿把免费额度宣传为永久不限量**；自建（家庭服务器/闲置主机）或按量付费实例是更稳的选择。
+- **为什么需要补丁**：上游原生 API 未携带 CORS 响应头，浏览器前端（clip.solyoung.top）无法直接跨域调用；且平台 CDN 直链在浏览器里常被 403 拦截。fork 补丁新增：
+  - `cors_patch.py`：全 API CORS 头（来源可用 `CORS_ALLOW_ORIGINS` 环境变量控制，默认 `*`）；
+  - `media_proxy.py`：`/api/v1/download` 媒体代理下载端点（服务端拉取 + 流式返回 + attachment 头，含域名白名单与 SSRF 防护，仅转发到平台媒体 CDN，不会被滥用为公共代理）；
+  - `server.py`：CORS + 代理合一的 WSGI 入口；`render.yaml`：Render 一键部署蓝图。
+- 部署方式：
+  - **Render 一键部署**：新建 Web Service 时选择/导入 `SolYoung-Ai/media-parser` 仓库，采用 `render.yaml` Blueprint（或 Web Service 手动选择 Python 环境），环境变量按 `render.yaml` 设置（`API_ONLY=true`、`TRUST_PROXY_HEADERS=true`、`CORS_ALLOW_ORIGINS=*`），startCommand `gunicorn -b 0.0.0.0:$PORT --timeout 120 server:app`；
+  - **本机直接使用（零成本、立即可用）**：`git clone` fork 仓库 → `pip install -r requirements.txt` → `API_ONLY=true CORS_ALLOW_ORIGINS='*' python server.py`（默认端口 8051）→ 前端设置页 Base URL 填 `http://localhost:8051`。浏览器允许 https 页面访问 localhost，本机跑后端即可「直接使用」；
+  - **Docker Compose**：`git clone` → `docker compose up -d --build`（需自行应用补丁）→ `http://localhost:8051`。
+- 免费托管评估：media-parser 是常驻服务，**免费层可运行但有限制**——Render/Railway/Zeabur 免费实例会休眠（闲置 15 分钟左右休眠，首次请求冷启动约 1 分钟）、CPU/内存配额有限、每月免费时长有限；云函数类平台需自备可常驻运行环境。免费方案会失效的典型条件：实例休眠、流量/时长超限、平台风控。**请勿把免费额度宣传为永久不限量**；自建（家庭服务器/闲置主机）或按量付费实例是更稳的选择。
 - 获取 API Base URL：部署后为 `http://<主机>:8051`（或你的域名），路径保持 `/api/v1/parse`。
 
 ### 5.2 为什么必须有解析服务
@@ -141,12 +146,12 @@ npm run preview    # 预览生产构建
 
 | 平台 | 前端适配 | 真实解析 | 依赖 |
 |---|---|---|---|
-| 抖音 | ✅ 域名识别/协议适配完整 | 取决于解析服务 | 公开链接即可；服务端可免 Cookie 解析 |
-| 小红书 | ✅ 域名识别/协议适配完整 | 取决于解析服务 | 部分链接需服务端凭证（Cookie / xsec_token） |
-| 微信视频号 | ✅ 域名识别/协议适配完整 | 取决于解析服务 | 分享链接有时效性；部分情况需服务端凭证 |
+| 抖音 | ✅ 域名识别/协议适配完整 | ✅ **已用真实链接端到端验证**（2026-10-21，本机后端） | 公开链接即可；服务端可免 Cookie 解析 |
+| 小红书 | ✅ 域名识别/协议适配完整 | ⏳ 待验证（依赖服务端凭证） | 部分链接需服务端凭证（Cookie / xsec_token） |
+| 微信视频号 | ✅ 域名识别/协议适配完整 | ⏳ 待验证（依赖服务端凭证） | 分享链接有时效性；部分情况需服务端凭证 |
 | 哔哩哔哩 | ⚠️ 仅平台识别（预留） | ❌ 未接入 | 需在解析服务支持后启用 |
 
-**本仓库不内置任何平台的后端抓取逻辑**，也未内置第三方公共解析接口（公共接口不稳定且不可作为永久基础设施）。接入真实解析 = 部署/配置一个 media-parser 兼容服务。
+**本仓库不内置任何平台的后端抓取逻辑**，也未内置第三方公共解析接口（公共接口不稳定且不可作为永久基础设施）。接入真实解析 = 部署/配置一个 media-parser 兼容服务（见第五节）。抖音为已实测平台，小红书/视频号取决于你部署的后端能力。
 
 ## 八、什么情况会导致解析失败
 
@@ -159,17 +164,18 @@ npm run preview    # 预览生产构建
 
 ## 九、哪些功能已完成 / 未完成真实接入
 
-**已完成（前端 + 本地能力）**：全部 UI、链接识别、协议适配层、下载三级策略、文案/字幕/整理稿查看与导出（含标准 SRT）、本地文件转写流程、设置与连接测试、本地历史、错误诊断、移动端、自动化测试、构建与部署流水线。
+**已完成（前端 + 本地能力）**：全部 UI、链接识别、协议适配层、下载三级策略 + 后端代理下载、文案/字幕/整理稿查看与导出（含标准 SRT）、本地文件转写流程、设置与连接测试、本地历史、错误诊断、移动端、自动化测试、构建与部署流水线。
 
-**未完成真实接入（需外部配置）**：
-1. 三个平台的真实解析 → 需部署/配置 media-parser 兼容服务（见第五节）；
-2. 口播转写的真实识别 → 需配置语音识别 API（见第六节）；
-3. B 站真实接入 → 解析服务支持后，前端已预留适配位。
+**真实接入状态（2026-10-21 实测）**：
+1. 抖音：✅ **真实解析 + 真实下载全部验证通过**——用公开抖音链接（v.douyin.com/ps9jNFfCcRQ/）在本机后端完成：解析出真实标题/文案/作者/封面/视频直链/音频；通过「后端代理下载」在浏览器真实保存 MP4 到本地（999,842 字节，文件类型正确）；
+2. 口播转写的真实识别 → 需配置语音识别 API（见第六节），尚未配置；
+3. 小红书 / 视频号 → 需部署公网后端（Render 等）并视平台情况配置服务端凭证后验证；
+4. B 站真实接入 → 解析服务支持后，前端已预留适配位。
 
 ## 十、费用 / 凭证 / 外部服务
 
 - 网站本身：零成本（GitHub Pages 免费托管）；
-- 解析服务：media-parser 自部署（你的服务器/Docker）或免费/按量托管实例——免费层有休眠、时长、流量限制；
+- 解析服务：media-parser 自部署（你的服务器/Docker）或免费/按量托管实例——免费层有休眠、时长、流量限制；本机自跑后端零成本；
 - 语音识别：使用你自己的 API Key（OpenAI 兼容服务，按量计费）；
 - 无需平台账号密码，本站不索取、不存储任何平台凭证。
 
@@ -177,13 +183,13 @@ npm run preview    # 预览生产构建
 
 - 链接仅发送给你配置的解析服务；文件仅发送给你配置的语音识别服务；历史与设置仅存本机；
 - 不绕过付费内容、DRM、登录权限；不提供平台账号密码输入；
-- 解析后端的 URL 校验、限流与代理安全属后端职责（media-parser 已内置访问控制与限流）；
+- 解析后端的 URL 校验、限流与代理安全属后端职责（media-parser 已内置访问控制与限流；本项目的媒体代理端点另加域名白名单 + 公网 IP 校验 + 体积/超时限制，杜绝 SSRF 与公共代理滥用）；
 - 下载内容仅供你在具有相应权利的范围内使用，遵守平台规则与版权要求；
 - 本站与抖音、小红书、微信官方无任何合作关系。
 
 ## 十二、测试记录
 
-见 [TESTING.md](./TESTING.md)。已运行：13 个测试文件、88 个用例全部通过；生产构建成功；本地预览 + 真实浏览器冒烟通过；对 media-parser 官方演示服务做了真实连接探测（服务可达但 CORS 拒绝，前端正确报告跨域错误）。
+见 [TESTING.md](./TESTING.md)。已运行：**13 个测试文件、90 个用例全部通过**；生产构建成功（JS 194KB / gzip 66KB）；本地预览 + 真实浏览器冒烟通过；对 media-parser 官方演示服务做了真实连接探测（服务可达但 CORS 拒绝，前端正确报告跨域错误）；**真实端到端验证**：本机后端 + 真实抖音链接完成解析/文案/下载全流程；线上 https://clip.solyoung.top 部署验证通过。
 
 ## 十三、开源许可证
 
