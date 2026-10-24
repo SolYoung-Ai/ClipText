@@ -72,12 +72,12 @@ export const DEFAULT_PARSER_SETTINGS = {
   timeoutMs: 20000,
 };
 
-/** 默认语音识别设置（同公网后端；免费层若 OOM 会在前端提示） */
+/** 默认语音识别设置（Groq Whisper Large V3 Turbo，需用户自填 API Key） */
 export const DEFAULT_ASR_SETTINGS = {
-  baseUrl: 'https://media-parser-unje.onrender.com',
+  baseUrl: 'https://api.groq.com/openai/v1',
   apiPath: '/v1/audio/transcriptions',
   apiKey: '',
-  model: 'base',
+  model: 'whisper-large-v3-turbo',
   language: 'zh',
   persistKey: false,
 };
