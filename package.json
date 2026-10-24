@@ -1,8 +1,8 @@
 {
-  "name": "cliptext",
+  "name": "solclip",
   "private": true,
   "version": "1.0.0",
-  "description": "ClipText — 多平台短视频解析、下载与文案提取工具（静态前端，GitHub Pages 可部署）",
+  "description": "SolClip — 多平台短视频解析、下载与文案提取工具（静态前端，GitHub Pages 可部署）",
   "type": "module",
   "scripts": {
     "dev": "vite",
