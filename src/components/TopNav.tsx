@@ -25,7 +25,7 @@ export function TopNav({ route, navigate }: NavProps) {
   return (
     <header className="topnav">
       <div className="topnav-inner">
-        <button className="brand" onClick={() => go('/')} aria-label="ClipText 首页">
+        <button className="brand" onClick={() => go('/')} aria-label="SolClip 首页">
           <span className="brand-logo" aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
               <rect x="10" y="16" width="44" height="32" rx="9" stroke="#c95b2a" strokeWidth="5" />
@@ -36,7 +36,7 @@ export function TopNav({ route, navigate }: NavProps) {
             </svg>
           </span>
           <span>
-            <span className="brand-name">ClipText</span>
+            <span className="brand-name">SolClip</span>
             <br />
             <span className="brand-sub">短视频解析与文案提取</span>
           </span>
