@@ -6,13 +6,9 @@ export interface PlatformInfo {
   name: string;
   shortName: string;
   color: string;
-  /** 用于平台识别的域名匹配模式 */
   domains: string[];
-  /** 平台分享链接常见域名（识别展示用） */
   example: string;
-  /** 支持状态说明 */
   note: string;
-  /** 解析依赖说明：true 表示该平台可能依赖服务端登录态/凭证 */
   needsServerCredential: boolean;
 }
 
@@ -63,48 +59,46 @@ export const PLATFORM_MAP: Record<string, PlatformId> = Object.fromEntries(
   PLATFORMS.map((p) => [p.id, p.id]),
 );
 
-/** 默认解析设置（指向公网 Render 部署的 media-parser） */
+/** 默认解析设置（media-parser 后端） */
 export const DEFAULT_PARSER_SETTINGS = {
   baseUrl: 'https://media-parser-unje.onrender.com',
   apiPath: '/api/v1/parse',
   authMode: 'none' as const,
   apiKey: '',
-  timeoutMs: 20000,
+  timeoutMs: 30000,
 };
 
-/** Groq API Key 分段拼接（避免静态扫描检测） */
-const GROQ_KEY_P1 = 'gsk_';
-const GROQ_KEY_P2 = '7BrZ3k8Knj1vXWokf56tWGdyb3FYBaoqTBdn6wFtSMpe8NXb7yOJ';
-const GROQ_API_KEY = GROQ_KEY_P1 + GROQ_KEY_P2;
+/** Worker 代理地址（下载 + ASR 中转，开箱即用） */
+export const WORKER_BASE_URL = 'https://groq-proxy.solyoungwork.workers.dev';
 
-/** 默认语音识别设置（Groq Whisper Large V3 Turbo，通过 Cloudflare Worker 代理，开箱即用） */
+/** 默认语音识别设置（Groq Whisper Large V3 Turbo，通过 Worker 代理） */
 export const DEFAULT_ASR_SETTINGS = {
-  baseUrl: 'https://groq-proxy.solyoungwork.workers.dev',
+  baseUrl: WORKER_BASE_URL,
   apiPath: '/v1/audio/transcriptions',
-  apiKey: GROQ_API_KEY,
+  apiKey: '',
   model: 'whisper-large-v3-turbo',
   language: 'zh',
   persistKey: false,
 };
 
-/** 本地存储键名（v2：升级后自动清除旧配置，应用新默认值） */
+/** 本地存储键名（v3：升级后自动清除旧配置） */
 export const STORAGE_KEYS = {
-  settings: 'cliptext.settings.v2',
-  asrSettings: 'cliptext.asr.settings.v2',
+  settings: 'cliptext.settings.v3',
+  asrSettings: 'cliptext.asr.settings.v3',
   history: 'cliptext.history.v1',
-  persistKey: 'cliptext.allowKeyPersist.v2',
+  persistKey: 'cliptext.allowKeyPersist.v3',
 };
 
-/** 历史记录上限（避免 localStorage 无限增长） */
+/** 历史记录上限 */
 export const HISTORY_LIMIT = 100;
 
-/** 单条历史大小上限（字符，防止异常大标题撑爆存储） */
+/** 单条历史大小上限 */
 export const HISTORY_ITEM_MAX_CHARS = 2000;
 
 /** 解析请求超时默认值（毫秒） */
-export const DEFAULT_TIMEOUT_MS = 20000;
+export const DEFAULT_TIMEOUT_MS = 30000;
 
-/** 本地文件转写大小限制提示阈值（字节，约 25MB，供提示用） */
+/** 本地文件转写大小限制提示阈值（约 25MB） */
 export const ASR_FILE_WARN_BYTES = 25 * 1024 * 1024;
 
 /** 支持的文件扩展名（口播转写） */
