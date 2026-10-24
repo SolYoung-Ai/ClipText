@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getPlatformInfo } from '../core/platformDetector';
-import { buildDownloadFileName, downloadVideo, guessExt, triggerProxyDownload } from '../core/downloadManager';
-import { loadParserSettings } from '../core/settingsService';
+import { buildDownloadFileName, guessExt } from '../core/downloadManager';
+import { loadAsrSettings } from '../core/settingsService';
 import type { ParseResult, VideoResource } from '../core/types';
 import { useToast } from './Toast';
 
@@ -13,10 +13,8 @@ interface ResultCardProps {
 export function ResultCard({ result, onReparse }: ResultCardProps) {
   const toast = useToast();
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [proxyDownloading, setProxyDownloading] = useState<string | null>(null);
-  const [openVideoUrl, setOpenVideoUrl] = useState<string | null>(null);
   const platform = getPlatformInfo(result.platform);
-  const parserBaseUrl = loadParserSettings().baseUrl.trim().replace(/\/+$/, '');
+  const workerBaseUrl = loadAsrSettings().baseUrl.trim().replace(/\/+$/, '');
 
   const allVideos: VideoResource[] =
     result.videoUrl || result.videoUrls.length
@@ -30,37 +28,19 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
     setDownloading(res.url);
     try {
       const fileName = buildDownloadFileName(result.platform, result.title || 'video', guessExt(res.url));
-      const outcome = await downloadVideo({ url: res.url, fileName });
-      if (outcome.kind === 'saved') {
-        toast(`已开始下载：${outcome.fileName}`);
-      } else if (outcome.kind === 'opened') {
-        toast('已在新标签页打开原始媒体；若未自动保存，请在播放页中手动保存');
-      } else {
-        toast(`下载失败：${outcome.reason}`, 'error');
-      }
+      // 走 Worker 代理下载，避免 CDN 防盗链 403
+      const proxyUrl = `${workerBaseUrl}/api/v1/proxy?url=${encodeURIComponent(res.url)}`;
+      const a = document.createElement('a');
+      a.href = proxyUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast(`已开始下载：${fileName}`);
     } catch (e) {
       toast(`下载失败：${(e as Error).message}`, 'error');
     } finally {
       setDownloading(null);
-    }
-  };
-
-  const handleOpen = (url: string) => {
-    setOpenVideoUrl(url);
-    window.open(url, '_blank', 'noopener');
-  };
-
-  const handleProxyDownload = (res: VideoResource) => {
-    if (proxyDownloading) return;
-    setProxyDownloading(res.url);
-    try {
-      const fileName = buildDownloadFileName(result.platform, result.title || 'video', guessExt(res.url));
-      triggerProxyDownload(parserBaseUrl, res.url, fileName);
-      toast(`已通过解析服务代理下载：${fileName}（浏览器下载栏查看进度）`);
-    } catch (e) {
-      toast(`代理下载失败：${(e as Error).message}`, 'error');
-    } finally {
-      setProxyDownloading(null);
     }
   };
 
@@ -135,13 +115,10 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
       {/* 视频资源列表与下载 */}
       {allVideos.length > 0 && (
         <div className="resource-list">
-          <h4>可用媒体资源（以解析服务实际返回为准）</h4>
+          <h4>可用媒体资源</h4>
           {allVideos.map((res, i) => (
             <div className="resource-item" key={i}>
-              <span className="resource-url" title={res.url}>
-                {res.url}
-              </span>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 {res.label && <span className="meta-pill">{res.label}</span>}
                 <button
                   className="btn btn-primary btn-sm"
@@ -150,33 +127,9 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
                 >
                   {downloading === res.url ? '下载中…' : '下载视频'}
                 </button>
-                {parserBaseUrl && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    style={{ background: 'var(--ink)', borderColor: 'var(--ink)' }}
-                    disabled={proxyDownloading === res.url}
-                    onClick={() => handleProxyDownload(res)}
-                  >
-                    {proxyDownloading === res.url ? '代理下载中…' : '后端代理下载'}
-                  </button>
-                )}
-                <button className="btn btn-soft btn-sm" onClick={() => handleOpen(res.url)}>
-                  打开原始地址
-                </button>
               </div>
             </div>
           ))}
-          <p style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 4 }}>
-            说明：平台 CDN 常拦截浏览器直连（无 CORS / Referer 校验），若「下载视频」未触发保存，可优先使用「后端代理下载」（解析服务提供流式转发），或「打开原始地址」手动保存。下载内容仅供你在具有相应权利的范围内使用。
-          </p>
-        </div>
-      )}
-
-      {openVideoUrl && (
-        <div className="resource-list" style={{ borderTop: 'none', paddingTop: 0 }}>
-          <p style={{ fontSize: 13, color: 'var(--ink-2)', wordBreak: 'break-all' }}>
-            已打开：{openVideoUrl}。若浏览器直接播放而未下载，可右键选择「视频另存为」。
-          </p>
         </div>
       )}
 
@@ -184,7 +137,7 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
       {result.images.length > 0 && (
         <div className="resource-list" style={{ borderTop: '1px solid var(--border)' }}>
           <h4>图集（{result.images.length} 张）</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
+          <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
             {result.images.map((img, i) => (
               <a key={i} href={img} target="_blank" rel="noopener noreferrer" title={img}>
                 <img
