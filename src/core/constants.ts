@@ -77,7 +77,7 @@ const GROQ_KEY_P1 = 'gsk_';
 const GROQ_KEY_P2 = '7BrZ3k8Knj1vXWokf56tWGdyb3FYBaoqTBdn6wFtSMpe8NXb7yOJ';
 const GROQ_API_KEY = GROQ_KEY_P1 + GROQ_KEY_P2;
 
-/** 默认语音识别设置（Groq Whisper Large V3 Turbo，通过 Cloudflare Worker 代理） */
+/** 默认语音识别设置（Groq Whisper Large V3 Turbo，通过 Cloudflare Worker 代理，开箱即用） */
 export const DEFAULT_ASR_SETTINGS = {
   baseUrl: 'https://groq-proxy.solyoungwork.workers.dev',
   apiPath: '/v1/audio/transcriptions',
@@ -87,12 +87,12 @@ export const DEFAULT_ASR_SETTINGS = {
   persistKey: false,
 };
 
-/** 本地存储键名 */
+/** 本地存储键名（v2：升级后自动清除旧配置，应用新默认值） */
 export const STORAGE_KEYS = {
-  settings: 'cliptext.settings.v1',
-  asrSettings: 'cliptext.asr.settings.v1',
+  settings: 'cliptext.settings.v2',
+  asrSettings: 'cliptext.asr.settings.v2',
   history: 'cliptext.history.v1',
-  persistKey: 'cliptext.allowKeyPersist.v1',
+  persistKey: 'cliptext.allowKeyPersist.v2',
 };
 
 /** 历史记录上限（避免 localStorage 无限增长） */
