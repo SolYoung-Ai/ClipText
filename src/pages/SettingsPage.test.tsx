@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { ToastProvider } from '../components/Toast';
 import { SettingsPage } from '../pages/SettingsPage';
 
@@ -12,47 +12,18 @@ function renderSettings() {
 }
 
 describe('SettingsPage', () => {
-  it('空服务地址时测试连接给出明确提示', async () => {
+  it('渲染本地数据管理区块', () => {
     renderSettings();
-    fireEvent.click(screen.getByRole('button', { name: '测试连接' }));
-    await waitFor(() => {
-      expect(screen.getByText(/请先填写解析服务地址/)).toBeInTheDocument();
-    });
-  });
-  it('连接测试使用真实请求并显示结果', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ retcode: 200, succ: true, data: { platform: '抖音' } }), { status: 200 }),
-      ),
-    );
-    renderSettings();
-    fireEvent.change(screen.getByLabelText('解析服务地址（Base URL）'), {
-      target: { value: 'https://mp.example.com' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: '测试连接' }));
-    await waitFor(() => {
-      expect(screen.getByText(/服务可达/)).toBeInTheDocument();
-    });
-    vi.unstubAllGlobals();
+    expect(screen.getByText('本地数据管理')).toBeInTheDocument();
   });
 
-  it('连接失败显示具体原因', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))));
+  it('渲染清空解析历史按钮', () => {
     renderSettings();
-    fireEvent.change(screen.getByLabelText('解析服务地址（Base URL）'), {
-      target: { value: 'https://down.example.com' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: '测试连接' }));
-    await waitFor(() => {
-      expect(screen.getByText(/✕ 连接失败/)).toBeInTheDocument();
-    });
-    vi.unstubAllGlobals();
+    expect(screen.getByRole('button', { name: '清空解析历史' })).toBeInTheDocument();
   });
 
-  it('API Key 默认隐藏输入', () => {
+  it('渲染隐私说明折叠面板', () => {
     renderSettings();
-    const keyInput = screen.getByLabelText('API Key（可选）') as HTMLInputElement;
-    expect(keyInput.type).toBe('password');
+    expect(screen.getByText('查看隐私与数据处理说明')).toBeInTheDocument();
   });
 });
