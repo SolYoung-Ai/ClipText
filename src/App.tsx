@@ -10,7 +10,6 @@ import { SettingsPage } from './pages/SettingsPage';
 
 export default function App() {
   const { route, navigate } = useHashRoute();
-  // 历史页「重新解析」时带回首页并预填链接
   const [prefill, setPrefill] = useState<string>('');
 
   const openLinkFromHistory = useCallback(
@@ -45,7 +44,7 @@ export default function App() {
       </div>
       <footer className="footer">
         <div className="container">
-          ClipText · 短视频解析与文案提取 · 静态前端，解析能力由可配置的解析服务提供
+          SolClip · 短视频解析与文案提取 · 静态前端，解析能力由可配置的解析服务提供
           <br />
           <a href="#/guide">使用指南</a> · <a href="#/settings">设置</a> ·{' '}
           <a href="#/platforms">支持平台</a> · 请仅处理你有权访问的内容，遵守平台规则与版权要求
