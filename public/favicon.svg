@@ -1,8 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="14" fill="#f7f3ec"/>
-  <rect x="14" y="18" width="36" height="28" rx="8" fill="none" stroke="#c95b2a" stroke-width="4"/>
-  <circle cx="24" cy="26" r="3" fill="#c95b2a"/>
-  <rect x="32" y="24" width="12" height="4" rx="2" fill="#c95b2a"/>
-  <rect x="20" y="34" width="24" height="3" rx="1.5" fill="#1f1b16"/>
-  <rect x="20" y="40" width="16" height="3" rx="1.5" fill="#1f1b16"/>
+  <text x="32" y="43" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="700" text-anchor="middle">
+    <tspan fill="#f26522">S</tspan><tspan fill="#1f1b16">C</tspan>
+  </text>
 </svg>
