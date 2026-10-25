@@ -1,6 +1,5 @@
 import type { PlatformId } from './types';
 
-/** 平台展示信息（CLIPTEXT_PLATFORMS） */
 export interface PlatformInfo {
   id: PlatformId;
   name: string;
@@ -50,7 +49,7 @@ export const PLATFORMS: PlatformInfo[] = [
     color: '#fb7299',
     domains: ['bilibili.com', 'b23.tv'],
     example: 'https://www.bilibili.com/video/BVxxxx',
-    note: '架构预留 · 尚未完成真实接入',
+    note: '公开视频 · 支持 BV 号解析与下载，字幕视接口返回',
     needsServerCredential: false,
   },
 ];
@@ -59,7 +58,6 @@ export const PLATFORM_MAP: Record<string, PlatformId> = Object.fromEntries(
   PLATFORMS.map((p) => [p.id, p.id]),
 );
 
-/** 默认解析设置（media-parser 后端） */
 export const DEFAULT_PARSER_SETTINGS = {
   baseUrl: 'https://media-parser-unje.onrender.com',
   apiPath: '/api/v1/parse',
@@ -68,10 +66,8 @@ export const DEFAULT_PARSER_SETTINGS = {
   timeoutMs: 30000,
 };
 
-/** Worker 代理地址（下载 + ASR 中转，开箱即用） */
 export const WORKER_BASE_URL = 'https://groq-proxy.solyoungwork.workers.dev';
 
-/** 默认语音识别设置（Groq Whisper Large V3 Turbo，通过 Worker 代理） */
 export const DEFAULT_ASR_SETTINGS = {
   baseUrl: WORKER_BASE_URL,
   apiPath: '/v1/audio/transcriptions',
@@ -81,7 +77,6 @@ export const DEFAULT_ASR_SETTINGS = {
   persistKey: false,
 };
 
-/** 本地存储键名（v3：升级后自动清除旧配置） */
 export const STORAGE_KEYS = {
   settings: 'cliptext.settings.v3',
   asrSettings: 'cliptext.asr.settings.v3',
@@ -89,17 +84,12 @@ export const STORAGE_KEYS = {
   persistKey: 'cliptext.allowKeyPersist.v3',
 };
 
-/** 历史记录上限 */
 export const HISTORY_LIMIT = 100;
 
-/** 单条历史大小上限 */
 export const HISTORY_ITEM_MAX_CHARS = 2000;
 
-/** 解析请求超时默认值（毫秒） */
 export const DEFAULT_TIMEOUT_MS = 30000;
 
-/** 本地文件转写大小限制提示阈值（约 25MB） */
 export const ASR_FILE_WARN_BYTES = 25 * 1024 * 1024;
 
-/** 支持的文件扩展名（口播转写） */
 export const ASR_ACCEPTED_EXT = ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'mp4', 'mov', 'webm'];
