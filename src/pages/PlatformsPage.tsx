@@ -30,11 +30,7 @@ export function PlatformsPage() {
                     <code>{p.domains[0]}</code>
                   </td>
                   <td>
-                    {p.id === 'bilibili' ? (
-                      <span style={{ color: 'var(--warn)' }}>架构预留 · 未接入</span>
-                    ) : (
-                      <span style={{ color: 'var(--success)' }}>已适配解析协议</span>
-                    )}
+                    <span style={{ color: 'var(--success)' }}>已适配解析协议</span>
                   </td>
                   <td>{p.note}</td>
                 </tr>
