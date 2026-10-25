@@ -8,7 +8,6 @@ interface NavProps {
 }
 
 const NAV_ITEMS = [
-  { path: '/guide', label: '使用指南' },
   { path: '/platforms', label: '支持平台' },
   { path: '/history', label: '历史记录' },
   { path: '/settings', label: '设置' },
