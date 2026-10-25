@@ -28,7 +28,6 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
     setDownloading(res.url);
     try {
       const fileName = buildDownloadFileName(result.platform, result.title || 'video', guessExt(res.url));
-      // 走 Worker 代理下载，避免 CDN 防盗链 403
       const proxyUrl = `${workerBaseUrl}/api/v1/proxy?url=${encodeURIComponent(res.url)}`;
       const a = document.createElement('a');
       a.href = proxyUrl;
@@ -46,100 +45,84 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
 
   const hasMedia = allVideos.length > 0 || Boolean(result.audioUrl);
   const metaPills: string[] = [];
-  if (result.duration != null) metaPills.push(`时长 ${formatDuration(result.duration)}`);
-  if (result.author?.name) metaPills.push(`作者 ${result.author.name}`);
-  if (result.subtitles.length) metaPills.push(`已有字幕 ${result.subtitles.length} 条`);
-  if (result.audioUrl) metaPills.push('含音频');
-  if (result.images.length) metaPills.push(`图集 ${result.images.length} 张`);
+  if (result.duration != null) metaPills.push(`${formatDuration(result.duration)}`);
+  if (result.author?.name) metaPills.push(result.author.name);
+  if (result.subtitles.length) metaPills.push(`${result.subtitles.length} 条字幕`);
+  if (result.images.length) metaPills.push(`${result.images.length} 张图集`);
 
   return (
-    <section className="result-card" aria-label="解析结果">
+    <section className="result-card" aria-label="解析结果" style={{ marginTop: 20 }}>
       <div className="result-main">
-        <div className="cover-wrap">
+        <div className="cover-wrap" style={{ width: 160, flexShrink: 0 }}>
           {result.coverUrl ? (
             <img
               src={result.coverUrl}
               alt={result.title || '视频封面'}
               loading="lazy"
               referrerPolicy="no-referrer"
+              style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 10 }}
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
           ) : (
-            <div className="cover-placeholder">
-              <svg width="34" height="34" viewBox="0 0 64 64" fill="none" opacity="0.5">
-                <rect x="8" y="14" width="48" height="36" rx="8" stroke="#8a837a" strokeWidth="4" />
-                <circle cx="20" cy="24" r="3" fill="#8a837a" />
-                <rect x="28" y="22" width="16" height="3" rx="1.5" fill="#8a837a" />
-                <rect x="14" y="32" width="36" height="3" rx="1.5" fill="#8a837a" />
-              </svg>
-              <span>未获取封面</span>
+            <div className="cover-placeholder" style={{ aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-2)', borderRadius: 10 }}>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>无封面</span>
             </div>
           )}
         </div>
 
-        <div className="result-info">
-          <div className="result-meta" style={{ marginTop: 0 }}>
-            <span className="meta-pill">
+        <div className="result-info" style={{ flex: 1, minWidth: 0 }}>
+          <div className="result-meta" style={{ marginTop: 0, marginBottom: 8 }}>
+            <span className="meta-pill" style={{ fontSize: 12 }}>
               <span className="platform-dot" style={{ background: platform?.color ?? '#8a837a' }} />
-              {platform?.name ?? '未知平台'}
+              {platform?.name ?? '未知'}
             </span>
             {metaPills.map((p) => (
-              <span className="meta-pill" key={p}>
+              <span className="meta-pill" key={p} style={{ fontSize: 12 }}>
                 {p}
               </span>
             ))}
           </div>
 
-          <h3 className="result-title" style={{ marginTop: 8 }}>
+          <h3 className="result-title" style={{ marginTop: 0, fontSize: 16, fontWeight: 600, lineHeight: 1.4, marginBottom: 6 }}>
             {result.title || '(未获取标题)'}
           </h3>
 
           {result.description ? (
-            <p className="result-desc">{result.description}</p>
-          ) : (
-            <p className="result-desc" style={{ color: 'var(--ink-3)', fontStyle: 'normal' }}>
-              未获取发布文案
+            <p className="result-desc" style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5, marginBottom: 0 }}>
+              {result.description}
             </p>
-          )}
-
-          {!hasMedia && result.errorCode === 'NO_VIDEO_URL' && (
-            <p style={{ marginTop: 10, fontSize: 13.5, color: 'var(--warn)' }}>
-              该内容未返回视频地址（可能是图集、音频或权限受限内容）。
-            </p>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* 视频资源列表与下载 */}
       {allVideos.length > 0 && (
-        <div className="resource-list">
-          <h4>可用媒体资源</h4>
+        <div className="resource-list" style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
           {allVideos.map((res, i) => (
-            <div className="resource-item" key={i}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                {res.label && <span className="meta-pill">{res.label}</span>}
-                <button
-                  className="btn btn-primary btn-sm"
-                  disabled={downloading === res.url}
-                  onClick={() => handleDownload(res)}
-                >
-                  {downloading === res.url ? '下载中…' : '下载视频'}
-                </button>
-              </div>
+            <div className="resource-item" key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 12 }}>
+                {res.label || `视频 ${i + 1}`}
+              </span>
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={downloading === res.url}
+                onClick={() => handleDownload(res)}
+                style={{ flexShrink: 0 }}
+              >
+                {downloading === res.url ? '下载中…' : '下载视频'}
+              </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* 图集（若接口返回） */}
       {result.images.length > 0 && (
-        <div className="resource-list" style={{ borderTop: '1px solid var(--border)' }}>
-          <h4>图集（{result.images.length} 张）</h4>
-          <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
+        <div className="resource-list" style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>图集（{result.images.length} 张）</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
             {result.images.map((img, i) => (
-              <a key={i} href={img} target="_blank" rel="noopener noreferrer" title={img}>
+              <a key={i} href={img} target="_blank" rel="noopener noreferrer">
                 <img
                   src={img}
                   alt={`图集 ${i + 1}`}
@@ -153,13 +136,10 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
         </div>
       )}
 
-      <div className="resource-list" style={{ borderTop: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: 'var(--ink-3)', marginRight: 4 }}>链接可能过期？</span>
-          <button className="btn btn-soft btn-sm" onClick={onReparse}>
-            重新解析
-          </button>
-        </div>
+      <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+        <button className="btn btn-soft btn-sm" onClick={onReparse}>
+          重新解析
+        </button>
       </div>
     </section>
   );
