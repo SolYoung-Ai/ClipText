@@ -24,21 +24,8 @@ export function TopNav({ route, navigate }: NavProps) {
   return (
     <header className="topnav">
       <div className="topnav-inner">
-        <button className="brand" onClick={() => go('/')} aria-label="SolClip 首页">
-          <span className="brand-logo" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 64 64" fill="none">
-              <rect x="10" y="16" width="44" height="32" rx="9" stroke="#c95b2a" strokeWidth="5" />
-              <circle cx="21" cy="26" r="3.5" fill="#c95b2a" />
-              <rect x="30" y="23" width="14" height="5" rx="2.5" fill="#c95b2a" />
-              <rect x="17" y="34" width="30" height="3.5" rx="1.75" fill="#1f1b16" />
-              <rect x="17" y="41" width="20" height="3.5" rx="1.75" fill="#1f1b16" />
-            </svg>
-          </span>
-          <span>
-            <span className="brand-name">SolClip</span>
-            <br />
-            <span className="brand-sub">短视频解析与文案提取</span>
-          </span>
+        <button className="brand" onClick={() => go('/')} aria-label="SolClip 首页" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+          <img src="./logo.svg" alt="SolClip" height="28" style={{ display: 'block' }} />
         </button>
 
         <nav className="nav-links" aria-label="主导航">
