@@ -31,7 +31,19 @@ export function AsrPanel({ settings, onTranscribed, hasSubtitle, mediaUrl, media
   const [dragging, setDragging] = useState(false);
   /** 所有自动路径都失败时置位，引导用户手动上传本地文件 */
   const [downloadBlocked, setDownloadBlocked] = useState(false);
+  /** 已等待秒数：免费实例转写较慢，长时间无反馈会让人以为卡死 */
+  const [elapsed, setElapsed] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!busy) {
+      setElapsed(0);
+      return;
+    }
+    const t0 = Date.now();
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - t0) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [busy]);
 
   // 每次解析结果变化（mediaUrl 改变）都重置拦截状态
   useEffect(() => {
@@ -91,13 +103,15 @@ export function AsrPanel({ settings, onTranscribed, hasSubtitle, mediaUrl, media
     const started = Date.now();
     try {
       let text = '';
-      setProgress('正在请求后端直接下载并转写（约 10~30 秒）…');
+      setProgress('正在请求后端下载并转写（免费实例较慢，1 分钟视频约需 2~3 分钟）…');
       try {
-        text = (await transcribeFromUrl(mediaUrl, settings)).text;
+        // 免费实例 CPU 较弱，转写耗时可能是音频时长的数倍，超时必须给足
+        text = (await transcribeFromUrl(mediaUrl, settings, { timeoutMs: 600000 })).text;
       } catch (directErr) {
         const de = directErr as AppError;
-        // 未配置解析服务时无法走代理，直接报原始错误
-        if (!mediaProxyBaseUrl || de.code === 'AUTH_FAILED') throw de;
+        // 只有「后端下载被平台拦截」才值得改走代理重取；
+        // 认证失败、转写超时、引擎缺失等问题换路径也没用，直接向上抛。
+        if (!mediaProxyBaseUrl || de.code !== 'DOWNLOAD_FAILED') throw de;
         setProgress('后端直连下载被平台拦截，正在通过媒体代理重新取回视频…');
         const { file, sizeMB } = await fetchMediaFileViaProxy({
           proxyBaseUrl: mediaProxyBaseUrl,
@@ -153,7 +167,7 @@ export function AsrPanel({ settings, onTranscribed, hasSubtitle, mediaUrl, media
           {busy ? (
             <>
               <span className="spinner" style={{ display: 'inline-block', verticalAlign: '-3px', marginRight: 8 }} />
-              正在转写当前视频…
+              正在转写当前视频…{elapsed >= 3 ? ` 已等待 ${elapsed} 秒` : ''}
             </>
           ) : (
             '⚡ 一键提取口播文案（自动下载转写）'
@@ -241,6 +255,7 @@ export function AsrPanel({ settings, onTranscribed, hasSubtitle, mediaUrl, media
       {progress && (
         <p className="asr-progress" role="status">
           {fileName && <strong>{fileName}</strong>} {progress}
+          {busy && elapsed >= 5 ? `（已等待 ${elapsed} 秒）` : ''}
         </p>
       )}
     </section>
