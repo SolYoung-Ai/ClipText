@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
+import { WORKER_BASE_URL } from './constants';
 import {
   clearAsrSettings,
   clearParserKey,
@@ -17,7 +18,7 @@ describe('settingsService', () => {
   it('默认不持久化 API Key：Key 不落盘，仅存会话内存', () => {
     saveParserSettings({ baseUrl: 'https://mp.x.com', apiPath: '/api/v1/parse', authMode: 'key', apiKey: 'secret-123', timeoutMs: 20000 }, false);
     // 1) 存储的配置 JSON 中绝不含 Key
-    const stored = localStorage.getItem('cliptext.settings.v1');
+    const stored = localStorage.getItem('cliptext.settings.v3');
     expect(stored).not.toContain('secret-123');
     // 2) 同一会话内（内存）仍可取回 Key
     expect(loadParserSettings().apiKey).toBe('secret-123');
@@ -29,8 +30,8 @@ describe('settingsService', () => {
 
   it('用户明确选择持久化后才写入 Key', () => {
     saveParserSettings({ baseUrl: 'https://mp.x.com', apiPath: '/api/v1/parse', authMode: 'bearer', apiKey: 'secret-456', timeoutMs: 20000 }, true);
-    expect(localStorage.getItem('cliptext.allowKeyPersist.v1')).toBe('true');
-    expect(localStorage.getItem('cliptext.settings.v1.key')).toBe('secret-456');
+    expect(localStorage.getItem('cliptext.allowKeyPersist.v3')).toBe('true');
+    expect(localStorage.getItem('cliptext.settings.v3.key')).toBe('secret-456');
     const loaded = loadParserSettings();
     expect(loaded.apiKey).toBe('secret-456');
   });
@@ -39,7 +40,7 @@ describe('settingsService', () => {
     saveParserSettings({ baseUrl: 'https://mp.x.com', apiPath: '/api/v1/parse', authMode: 'key', apiKey: 'secret', timeoutMs: 20000 }, true);
     clearParserKey();
     expect(loadParserSettings().apiKey).toBe('');
-    expect(localStorage.getItem('cliptext.settings.v1.key')).toBeNull();
+    expect(localStorage.getItem('cliptext.settings.v3.key')).toBeNull();
   });
 
   it('maskKey 脱敏', () => {
@@ -55,6 +56,8 @@ describe('settingsService', () => {
     const loaded = loadAsrSettings();
     expect(loaded.baseUrl).toBe('https://asr.x.com/v1');
     clearAsrSettings();
-    expect(loadAsrSettings().baseUrl).toBe('');
+    // 清除后回退到默认配置（Groq 代理地址），而不是空串
+    expect(loadAsrSettings().baseUrl).toBe(WORKER_BASE_URL);
+    expect(loadAsrSettings().apiKey).toBe('');
   });
 });

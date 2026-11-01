@@ -1,10 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { extractAudioWav, EXTRACT_MIN_BYTES } from '../core/audioExtractor';
 import { ASR_FILE_WARN_BYTES, ASR_ACCEPTED_EXT } from '../core/constants';
 import { AppError } from '../core/errors';
 import {
+  fetchMediaFileViaProxy,
   fileSizeMB,
   isAcceptedFile,
   transcribeFile,
+  transcribeFromUrl,
 } from '../core/speechToTextService';
 import type { AsrSettings } from '../core/types';
 import { useToast } from './Toast';
@@ -16,31 +19,55 @@ interface AsrPanelProps {
   hasSubtitle: boolean;
   /** 当前解析结果的媒体直链（音频优先），存在时显示「直接转写当前视频」 */
   mediaUrl?: string;
+  /** 解析服务地址：提供媒体代理下载，用于绕开平台对服务器直连下载的拦截 */
+  mediaProxyBaseUrl?: string;
 }
 
-export function AsrPanel({ settings, onTranscribed, hasSubtitle, mediaUrl }: AsrPanelProps) {
+export function AsrPanel({ settings, onTranscribed, hasSubtitle, mediaUrl, mediaProxyBaseUrl }: AsrPanelProps) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [fileName, setFileName] = useState('');
   const [dragging, setDragging] = useState(false);
+  /** 所有自动路径都失败时置位，引导用户手动上传本地文件 */
+  const [downloadBlocked, setDownloadBlocked] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // 每次解析结果变化（mediaUrl 改变）都重置拦截状态
+  useEffect(() => {
+    setDownloadBlocked(false);
+  }, [mediaUrl]);
+
+  /** 上传前先抽音轨：几十 MB 的视频通常可压到几 MB，上传更快也更不容易超限 */
+  const transcribeUpload = async (file: File): Promise<string> => {
+    let upload = file;
+    if (file.size >= EXTRACT_MIN_BYTES) {
+      setProgress(`正在提取音轨以加快上传（原文件 ${fileSizeMB(file).toFixed(1)} MB）…`);
+      const wav = await extractAudioWav(file, { fileName: file.name });
+      if (wav && wav.size < file.size) {
+        upload = wav;
+      }
+    }
+    setProgress(`正在上传并识别 ${upload.name}（${fileSizeMB(upload).toFixed(1)} MB）…`);
+    const out = await transcribeFile(upload, settings, { timeoutMs: 300000 });
+    return out.text;
+  };
 
   const run = async (file: File) => {
     if (busy) return;
     setBusy(true);
     setFileName(file.name);
-    setProgress(`正在上传并识别 ${file.name}（${fileSizeMB(file).toFixed(1)} MB）…`);
     try {
       if (!isAcceptedFile(file)) {
         throw new AppError('ASR_FAILED', `不支持的文件格式，支持：${ASR_ACCEPTED_EXT.join(' / ')}`);
       }
       if (file.size > ASR_FILE_WARN_BYTES) {
-        setProgress('文件较大（超过约 25MB），部分服务可能限制，若失败请压缩后重试。');
+        setProgress('文件较大（超过约 25MB），正在压缩音轨后上传…');
       }
-      const out = await transcribeFile(file, settings);
-      onTranscribed(out.text);
-      setProgress(`识别完成，耗时 ${(out.durationMs / 1000).toFixed(1)} 秒。结果已填入「口播转写」标签页。`);
+      const text = await transcribeUpload(file);
+      onTranscribed(text);
+      setProgress('识别完成，结果已填入「口播转写」标签页。');
+      setDownloadBlocked(false);
       toast('口播转写完成');
     } catch (err) {
       const e = err as AppError;
@@ -51,52 +78,58 @@ export function AsrPanel({ settings, onTranscribed, hasSubtitle, mediaUrl }: Asr
     }
   };
 
-  /** 直接对刚解析出来的媒体直链转写（通过 Cloudflare Worker 代理） */
+  /**
+   * 一键提取当前视频的口播文案。
+   * 链路：后端直连下载转写 → 失败则经媒体代理下载 → 浏览器上传转写。
+   * 这样即使平台 CDN 拦截服务器下载（403/502），功能依然可用。
+   */
   const runFromUrl = async () => {
     if (busy || !mediaUrl) return;
     setBusy(true);
-    setProgress('正在下载视频并转写口播（约 10~30 秒）…');
+    setDownloadBlocked(false);
+    setFileName('');
+    const started = Date.now();
     try {
-      const base = settings.baseUrl.replace(/\/+$/, '');
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 120000);
-      const started = Date.now();
-      let res: Response;
+      let text = '';
+      setProgress('正在请求后端直接下载并转写（约 10~30 秒）…');
       try {
-        res = await fetch(`${base}/api/v1/asr-from-url`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: mediaUrl }),
-          signal: controller.signal,
+        text = (await transcribeFromUrl(mediaUrl, settings)).text;
+      } catch (directErr) {
+        const de = directErr as AppError;
+        // 未配置解析服务时无法走代理，直接报原始错误
+        if (!mediaProxyBaseUrl || de.code === 'AUTH_FAILED') throw de;
+        setProgress('后端直连下载被平台拦截，正在通过媒体代理重新取回视频…');
+        const { file, sizeMB } = await fetchMediaFileViaProxy({
+          proxyBaseUrl: mediaProxyBaseUrl,
+          mediaUrl,
+          fileName: '口播素材',
+          onProgress: (received, total) => {
+            const mb = (received / 1048576).toFixed(1);
+            setProgress(total ? `正在下载视频 ${Math.min(100, Math.round((received / total) * 100))}%…` : `正在下载视频（已接收 ${mb} MB）…`);
+          },
         });
-      } finally {
-        clearTimeout(timer);
-      }
-      const raw = await res.text();
-      if (!res.ok) {
-        throw new AppError('ASR_FAILED', `转写失败（HTTP ${res.status}）：${raw.slice(0, 200)}`);
-      }
-      let data: { text?: string } | null = null;
-      try {
-        data = raw ? JSON.parse(raw) : null;
-      } catch {
-        /* ignore */
-      }
-      const text = (data?.text ?? '').trim();
-      if (!text) {
-        throw new AppError('ASR_FAILED', '转写返回了空文本');
+        setFileName(file.name);
+        setProgress(`视频已取回（${sizeMB.toFixed(1)} MB），准备转写…`);
+        text = await transcribeUpload(file);
       }
       onTranscribed(text);
       setProgress(`识别完成，耗时 ${((Date.now() - started) / 1000).toFixed(1)} 秒。结果已填入「口播转写」标签页。`);
       toast('口播转写完成');
     } catch (err) {
       const e = err as AppError;
-      const msg = e.name === 'AbortError' ? '转写超时（2 分钟），请稍后重试' : e.message;
+      const msg = e.name === 'AbortError' ? '转写超时，请稍后重试' : e.message;
+      if (e.code === 'DOWNLOAD_FAILED') setDownloadBlocked(true);
       setProgress(`识别失败：${msg}`);
       toast(msg, 'error');
     } finally {
       setBusy(false);
     }
+  };
+
+  /** 自动下载被拦截时，引导用户改用本地视频文件上传 */
+  const pickLocalFile = () => {
+    if (busy) return;
+    fileRef.current?.click();
   };
 
   return (
@@ -127,6 +160,36 @@ export function AsrPanel({ settings, onTranscribed, hasSubtitle, mediaUrl }: Asr
           )}
         </button>
       ) : null}
+
+      {downloadBlocked && (
+        <div className="asr-fallback" role="alert" style={{ marginBottom: 12 }}>
+          <p className="hint" style={{ marginBottom: 10 }}>
+            自动路径（后端直连 + 媒体代理）都没能取到视频，最后一步可以手动完成：先用上方「视频下载」把视频存到本机，再点下面的按钮选择该文件转写。
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={pickLocalFile}
+              disabled={busy}
+              style={{ flex: '1 1 auto' }}
+            >
+              📁 选择本地视频文件转写
+            </button>
+            <button
+              type="button"
+              className="btn btn-soft"
+              onClick={() => {
+                setDownloadBlocked(false);
+                void runFromUrl();
+              }}
+              disabled={busy || !mediaUrl}
+            >
+              重试自动提取
+            </button>
+          </div>
+        </div>
+      )}
 
       <div
         className={`file-drop ${dragging ? 'dragging' : ''}`}

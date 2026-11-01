@@ -760,6 +760,19 @@ select {
   color: var(--ink-2);
 }
 
+/* 自动路径全部失败时的兜底提示 */
+.asr-fallback {
+  border: 1px solid var(--warn);
+  background: var(--warn-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.asr-fallback .hint {
+  color: var(--warn);
+  margin-bottom: 10px;
+}
+
 /* ---------- 设置 ---------- */
 .settings-section {
   background: var(--surface);

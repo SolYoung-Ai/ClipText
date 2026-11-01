@@ -9,7 +9,7 @@ beforeEach(() => {
 
 function seedParserSettings() {
   localStorage.setItem(
-    'cliptext.settings.v1',
+    'cliptext.settings.v3',
     JSON.stringify({ baseUrl: 'https://mp.example.com', apiPath: '/api/v1/parse', authMode: 'none', timeoutMs: 5000 }),
   );
 }
@@ -99,6 +99,11 @@ describe('HomePage 解析全流程', () => {
   });
 
   it('未配置解析服务时给出明确引导', async () => {
+    // 显式把解析服务地址置空，模拟「尚未配置」
+    localStorage.setItem(
+      'cliptext.settings.v3',
+      JSON.stringify({ baseUrl: '', apiPath: '/api/v1/parse', authMode: 'none', timeoutMs: 5000 }),
+    );
     renderHome();
     fireEvent.change(screen.getByLabelText('视频分享链接输入框'), {
       target: { value: 'https://v.douyin.com/abc/' },
