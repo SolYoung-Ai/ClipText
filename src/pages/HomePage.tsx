@@ -12,13 +12,6 @@ import { loadAsrSettings, loadParserSettings } from '../core/settingsService';
 import { extractUrlFromText } from '../core/urlNormalizer';
 import type { ParseResult } from '../core/types';
 
-const PLATFORM_LABELS: Record<string, string> = {
-  douyin: '抖音',
-  xiaohongshu: '小红书',
-  wechat: '视频号',
-  bilibili: 'B站',
-};
-
 export function HomePage({ initialLink = '' }: { initialLink?: string }) {
   const [input, setInput] = useState(initialLink);
   const [loading, setLoading] = useState(false);

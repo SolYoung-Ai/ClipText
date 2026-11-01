@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { WORKER_BASE_URL } from './constants';
+import { SELF_HOSTED_BASE_URL } from './constants';
 import {
   clearAsrSettings,
   clearParserKey,
@@ -56,8 +56,21 @@ describe('settingsService', () => {
     const loaded = loadAsrSettings();
     expect(loaded.baseUrl).toBe('https://asr.x.com/v1');
     clearAsrSettings();
-    // 清除后回退到默认配置（Groq 代理地址），而不是空串
-    expect(loadAsrSettings().baseUrl).toBe(WORKER_BASE_URL);
+    // 清除后回退到默认配置（自建后端地址），而不是空串
+    expect(loadAsrSettings().baseUrl).toBe(SELF_HOSTED_BASE_URL);
     expect(loadAsrSettings().apiKey).toBe('');
+  });
+
+  it('旧示例后端地址会自动迁移到自建后端', () => {
+    localStorage.setItem(
+      'cliptext.settings.v3',
+      JSON.stringify({ baseUrl: 'https://media-parser-unje.onrender.com', apiPath: '/api/v1/parse', authMode: 'none', timeoutMs: 30000 }),
+    );
+    localStorage.setItem(
+      'cliptext.asr.settings.v3',
+      JSON.stringify({ baseUrl: 'https://media-parser-unje.onrender.com', apiPath: '/v1/audio/transcriptions', model: 'tiny', language: 'zh' }),
+    );
+    expect(loadParserSettings().baseUrl).toBe(SELF_HOSTED_BASE_URL);
+    expect(loadAsrSettings().baseUrl).toBe(SELF_HOSTED_BASE_URL);
   });
 });

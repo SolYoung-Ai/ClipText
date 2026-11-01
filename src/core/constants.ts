@@ -58,21 +58,29 @@ export const PLATFORM_MAP: Record<string, PlatformId> = Object.fromEntries(
   PLATFORMS.map((p) => [p.id, p.id]),
 );
 
+/** 自建后端地址（SolYoung-Ai/media-parser，Render 免费实例） */
+export const SELF_HOSTED_BASE_URL = 'https://media-parser-1.onrender.com';
+
+/** 旧的示例后端：上游作者部署的公共实例，无转写引擎，仅用于历史设置迁移 */
+export const LEGACY_DEMO_HOSTS = ['media-parser-unje.onrender.com'];
+
 export const DEFAULT_PARSER_SETTINGS = {
-  baseUrl: 'https://media-parser-unje.onrender.com',
+  baseUrl: SELF_HOSTED_BASE_URL,
   apiPath: '/api/v1/parse',
   authMode: 'none' as const,
   apiKey: '',
-  timeoutMs: 30000,
+  // 免费实例闲置休眠，冷启动约 30~60 秒，超时需留足余量
+  timeoutMs: 90000,
 };
 
 export const WORKER_BASE_URL = 'https://groq-proxy.solyoungwork.workers.dev';
 
 export const DEFAULT_ASR_SETTINGS = {
-  baseUrl: WORKER_BASE_URL,
+  // 自建后端内置 faster-whisper，无需 API Key；模型名由后端 ASR_MODEL 决定
+  baseUrl: SELF_HOSTED_BASE_URL,
   apiPath: '/v1/audio/transcriptions',
   apiKey: '',
-  model: 'whisper-large-v3-turbo',
+  model: 'tiny',
   language: 'zh',
   persistKey: false,
 };
@@ -88,7 +96,7 @@ export const HISTORY_LIMIT = 100;
 
 export const HISTORY_ITEM_MAX_CHARS = 2000;
 
-export const DEFAULT_TIMEOUT_MS = 30000;
+export const DEFAULT_TIMEOUT_MS = 90000;
 
 export const ASR_FILE_WARN_BYTES = 25 * 1024 * 1024;
 

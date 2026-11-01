@@ -43,7 +43,6 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
     }
   };
 
-  const hasMedia = allVideos.length > 0 || Boolean(result.audioUrl);
   const metaPills: string[] = [];
   if (result.duration != null) metaPills.push(`${formatDuration(result.duration)}`);
   if (result.author?.name) metaPills.push(result.author.name);

@@ -1,4 +1,10 @@
-import { DEFAULT_ASR_SETTINGS, DEFAULT_PARSER_SETTINGS, STORAGE_KEYS } from './constants';
+import {
+  DEFAULT_ASR_SETTINGS,
+  DEFAULT_PARSER_SETTINGS,
+  LEGACY_DEMO_HOSTS,
+  SELF_HOSTED_BASE_URL,
+  STORAGE_KEYS,
+} from './constants';
 import type { AsrSettings, AuthMode, ParserSettings } from './types';
 
 /**
@@ -17,6 +23,18 @@ function safeParse<T>(raw: string | null, fallback: T): T {
   }
 }
 
+/**
+ * 兼容迁移：老版本默认指向上游作者的公共示例实例（没有转写引擎，请求会被平台拦截）。
+ * 浏览器里已存过的设置会覆盖新默认值，因此在这里统一改写到自建后端，
+ * 否则老用户永远读不到新地址。
+ */
+function migrateLegacyBaseUrl<T extends { baseUrl: string }>(s: T): T {
+  if (s.baseUrl && LEGACY_DEMO_HOSTS.some((h) => s.baseUrl.includes(h))) {
+    s.baseUrl = SELF_HOSTED_BASE_URL;
+  }
+  return s;
+}
+
 export function loadParserSettings(): ParserSettings {
   const base = safeParse<ParserSettings>(
     localStorage.getItem(STORAGE_KEYS.settings),
@@ -30,7 +48,7 @@ export function loadParserSettings(): ParserSettings {
     base.apiKey = sessionKeys.get('parserKey') ?? '';
   }
   if (![ 'none', 'key', 'bearer' ].includes(base.authMode)) base.authMode = 'none';
-  return base;
+  return migrateLegacyBaseUrl(base);
 }
 
 export function saveParserSettings(s: ParserSettings, persistKey: boolean): void {
@@ -67,7 +85,7 @@ export function loadAsrSettings(): AsrSettings {
   } else {
     base.apiKey = sessionKeys.get('asrKey') ?? '';
   }
-  return base;
+  return migrateLegacyBaseUrl(base);
 }
 
 export function saveAsrSettings(s: AsrSettings): void {
