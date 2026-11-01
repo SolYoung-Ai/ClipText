@@ -76,11 +76,12 @@ export const DEFAULT_PARSER_SETTINGS = {
 export const WORKER_BASE_URL = 'https://groq-proxy.solyoungwork.workers.dev';
 
 export const DEFAULT_ASR_SETTINGS = {
-  // 自建后端内置 faster-whisper，无需 API Key；模型名由后端 ASR_MODEL 决定
+  // 自建后端内置 faster-whisper，无需 API Key
   baseUrl: SELF_HOSTED_BASE_URL,
   apiPath: '/v1/audio/transcriptions',
   apiKey: '',
-  model: 'tiny',
+  // base 比 tiny 准确得多（脚本/音轨这类词 tiny 会转错），耗时同量级
+  model: 'base',
   language: 'zh',
   persistKey: false,
 };

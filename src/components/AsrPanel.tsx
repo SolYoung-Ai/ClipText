@@ -103,7 +103,7 @@ export function AsrPanel({ settings, onTranscribed, hasSubtitle, mediaUrl, media
     const started = Date.now();
     try {
       let text = '';
-      setProgress('正在请求后端下载并转写（免费实例较慢，1 分钟视频约需 2~3 分钟）…');
+      setProgress('正在请求后端下载并转写（免费实例较慢，1 分钟视频约需 2~5 分钟）…');
       try {
         // 免费实例 CPU 较弱，转写耗时可能是音频时长的数倍，超时必须给足
         text = (await transcribeFromUrl(mediaUrl, settings, { timeoutMs: 600000 })).text;

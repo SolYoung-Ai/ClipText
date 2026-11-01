@@ -85,7 +85,10 @@ export function loadAsrSettings(): AsrSettings {
   } else {
     base.apiKey = sessionKeys.get('asrKey') ?? '';
   }
-  return migrateLegacyBaseUrl(base);
+  migrateLegacyBaseUrl(base);
+  // 老默认值是 Groq 的模型名，自建后端只认 tiny / base，这里统一纠正
+  if (!['tiny', 'base'].includes(base.model)) base.model = DEFAULT_ASR_SETTINGS.model;
+  return base;
 }
 
 export function saveAsrSettings(s: AsrSettings): void {
