@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getPlatformInfo } from '../core/platformDetector';
-import { buildDownloadFileName, guessExt } from '../core/downloadManager';
-import { loadAsrSettings } from '../core/settingsService';
+import { buildDownloadFileName, guessExt, saveVideoViaProxy } from '../core/downloadManager';
+import { loadParserSettings } from '../core/settingsService';
 import type { ParseResult, VideoResource } from '../core/types';
 import { useToast } from './Toast';
 
@@ -13,8 +13,11 @@ interface ResultCardProps {
 export function ResultCard({ result, onReparse }: ResultCardProps) {
   const toast = useToast();
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [progress, setProgress] = useState('');
+  const [downloadError, setDownloadError] = useState<{ url: string; message: string } | null>(null);
   const platform = getPlatformInfo(result.platform);
-  const workerBaseUrl = loadAsrSettings().baseUrl.trim().replace(/\/+$/, '');
+  // 媒体代理由解析服务提供（/api/v1/download），不是 ASR 服务，也不是旧的 /api/v1/proxy
+  const proxyBaseUrl = loadParserSettings().baseUrl.trim().replace(/\/+$/, '');
 
   const allVideos: VideoResource[] =
     result.videoUrl || result.videoUrls.length
@@ -26,19 +29,33 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
   const handleDownload = async (res: VideoResource) => {
     if (downloading) return;
     setDownloading(res.url);
+    setDownloadError(null);
+    setProgress('正在连接媒体代理…');
+    // 进度回调很频繁，限流到每 200ms 刷新一次界面
+    let lastUpdate = 0;
     try {
       const fileName = buildDownloadFileName(result.platform, result.title || 'video', guessExt(res.url));
-      const proxyUrl = `${workerBaseUrl}/api/v1/proxy?url=${encodeURIComponent(res.url)}`;
-      const a = document.createElement('a');
-      a.href = proxyUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast(`已开始下载：${fileName}`);
+      const out = await saveVideoViaProxy({
+        proxyBaseUrl,
+        mediaUrl: res.url,
+        fileName,
+        onProgress: (received, total) => {
+          const now = Date.now();
+          if (now - lastUpdate < 200 && received !== total) return;
+          lastUpdate = now;
+          const mb = (n: number) => (n / 1048576).toFixed(1);
+          setProgress(total
+            ? `正在下载 ${mb(received)} / ${mb(total)} MB…`
+            : `正在下载 ${mb(received)} MB…`);
+        },
+      });
+      toast(`已保存：${out.fileName}（${out.sizeMB.toFixed(1)} MB）`);
     } catch (e) {
-      toast(`下载失败：${(e as Error).message}`, 'error');
+      const message = (e as Error).message || '下载失败';
+      setDownloadError({ url: res.url, message });
+      toast(`下载失败：${message}`, 'error');
     } finally {
+      setProgress('');
       setDownloading(null);
     }
   };
@@ -113,6 +130,24 @@ export function ResultCard({ result, onReparse }: ResultCardProps) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {progress && (
+        <p className="hint" role="status" style={{ marginTop: 10, fontSize: 12.5 }}>
+          {progress}
+        </p>
+      )}
+
+      {downloadError && (
+        <div
+          role="alert"
+          style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--bg-2)', border: '1px solid var(--border)' }}
+        >
+          <p className="hint" style={{ margin: '0 0 8px', fontSize: 12.5 }}>{downloadError.message}</p>
+          <a className="btn btn-soft btn-sm" href={downloadError.url} target="_blank" rel="noopener noreferrer">
+            打开原始视频地址
+          </a>
         </div>
       )}
 

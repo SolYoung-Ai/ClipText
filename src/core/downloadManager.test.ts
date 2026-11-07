@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { buildDownloadFileName, buildProxyDownloadUrl, guessExt } from './downloadManager';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  buildDownloadFileName,
+  buildProxyDownloadUrl,
+  guessExt,
+  saveVideoViaProxy,
+} from './downloadManager';
 
 describe('downloadManager', () => {
   it('文件名包含平台与标题并清除非法字符', () => {
@@ -34,11 +39,65 @@ describe('downloadManager', () => {
     );
     expect(url).toContain('http://localhost:8051/api/v1/download');
     expect(url).toContain('url=https%3A%2F%2Fcdn.example.com%2Fvideo.mp4%3Fa%3D1%26b%3D2');
-    expect(url).toContain('name=' + encodeURIComponent('抖音_暴雨'));
+    expect(url).toContain('name=' + encodeURIComponent('抖音_暴雨.mp4'));
   });
 
   it('Base URL 末尾斜杠会被清理', () => {
     const url = buildProxyDownloadUrl('https://mp.example.com/', 'https://cdn.example.com/a.mp4');
     expect(url.startsWith('https://mp.example.com/api/v1/download')).toBe(true);
+  });
+});
+
+describe('saveVideoViaProxy', () => {
+  const opts = {
+    proxyBaseUrl: 'https://media-parser.example.com',
+    mediaUrl: 'https://cdn.example.com/a.mp4?x=1',
+    fileName: '抖音_测试.mp4',
+  };
+
+  beforeEach(() => {
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: vi.fn(() => 'blob:mock'), configurable: true, writable: true,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      value: vi.fn(), configurable: true, writable: true,
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('请求 /api/v1/download 且带完整文件名，成功后保存为本地文件', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(2048), { status: 200, headers: { 'Content-Type': 'video/mp4' } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const out = await saveVideoViaProxy(opts);
+
+    const calledUrl = String(fetchMock.mock.calls[0][0]);
+    expect(calledUrl).toContain('https://media-parser.example.com/api/v1/download');
+    expect(calledUrl).toContain('name=' + encodeURIComponent('抖音_测试.mp4'));
+    expect(out.kind).toBe('saved');
+    expect(out.sizeMB).toBeGreaterThan(0);
+    expect(URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('HTTP 405 时抛出可读错误，不会假装下载成功', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response('<h1>Method Not Allowed</h1>', { status: 405 }),
+    ));
+    await expect(saveVideoViaProxy(opts)).rejects.toThrow(/405/);
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('空文件视为失败', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(0), { status: 200 }),
+    ));
+    await expect(saveVideoViaProxy(opts)).rejects.toThrow(/空文件/);
   });
 });
